@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Philosophy Texts For Everyone</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+
+  <!-- DataTables -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/css/jquery.dataTables.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/js/jquery.dataTables.min.js"></script>
+
+  <!-- PapaParse for CSV -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+  <style>
+    :root {
+      --cream:     #f5f0e8;
+      --parchment: #ede6d6;
+      --warm-mid:  #c8b99a;
+      --sienna:    #8b5e3c;
+      --dark-ink:  #2c1f0e;
+      --ink-mid:   #4a3728;
+      --green:     #4a7c59;
+      --amber:     #b07d2e;
+      --rule:      rgba(139,94,60,0.25);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--cream);
+      color: var(--dark-ink);
+      font-family: 'EB Garamond', Georgia, serif;
+      font-size: 17px;
+      line-height: 1.7;
+      min-height: 100vh;
+    }
+
+    /* ── TEXTURE OVERLAY ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── LAYOUT ── */
+    .page-wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 2rem 4rem;
+    }
+
+    /* ── HEADER ── */
+    header {
+      padding: 3.5rem 0 2rem;
+      border-bottom: 1px solid var(--rule);
+      margin-bottom: 2.5rem;
+    }
+
+    .header-eyebrow {
+      font-family: 'EB Garamond', serif;
+      font-size: 0.8rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--sienna);
+      margin-bottom: 0.75rem;
+      opacity: 0.8;
+    }
+
+    h1 {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      font-weight: 600;
+      line-height: 1.1;
+      color: var(--dark-ink);
+      letter-spacing: -0.01em;
+    }
+
+    h1 em {
+      font-style: italic;
+      color: var(--sienna);
+    }
+
+    .header-sub {
+      margin-top: 1rem;
+      font-size: 1rem;
+      color: var(--ink-mid);
+      max-width: 600px;
+      font-style: italic;
+    }
+
+    .header-meta {
+      margin-top: 1.5rem;
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .meta-chip {
+      font-size: 0.78rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--sienna);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .meta-chip::before {
+      content: '—';
+      opacity: 0.5;
+    }
+
+    /* ── CONTROLS ── */
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .search-wrap {
+      position: relative;
+      flex: 1;
+      max-width: 380px;
+    }
+
+    .search-wrap input {
+      width: 100%;
+      padding: 0.6rem 1rem 0.6rem 2.4rem;
+      border: 1px solid var(--rule);
+      border-radius: 2px;
+      background: var(--parchment);
+      font-family: 'EB Garamond', serif;
+      font-size: 0.95rem;
+      color: var(--dark-ink);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-wrap input:focus {
+      border-color: var(--sienna);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      opacity: 0.4;
+      font-size: 0.9rem;
+    }
+
+    .filter-wrap {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      padding: 0.4rem 0.9rem;
+      border: 1px solid var(--rule);
+      border-radius: 2px;
+      background: transparent;
+      font-family: 'EB Garamond', serif;
+      font-size: 0.85rem;
+      color: var(--ink-mid);
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.03em;
+    }
+
+    .filter-btn:hover,
+    .filter-btn.active {
+      background: var(--sienna);
+      border-color: var(--sienna);
+      color: var(--cream);
+    }
+
+    /* ── LOADING ── */
+    #loading {
+      text-align: center;
+      padding: 4rem 0;
+      font-style: italic;
+      color: var(--ink-mid);
+      opacity: 0.7;
+      font-size: 1.05rem;
+    }
+
+    /* ── TABLE WRAPPER ── */
+    .table-outer {
+      background: var(--parchment);
+      border: 1px solid var(--rule);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    /* ── DATATABLES OVERRIDES ── */
+    table.dataTable {
+      width: 100% !important;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+    }
+
+    table.dataTable thead th {
+      font-family: 'EB Garamond', serif;
+      font-size: 0.72rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--sienna);
+      font-weight: 500;
+      background: var(--parchment);
+      border-bottom: 1px solid var(--rule) !important;
+      padding: 0.85rem 1rem;
+      white-space: nowrap;
+    }
+
+    table.dataTable thead th:first-child { padding-left: 1.5rem; }
+
+    table.dataTable.no-footer { border: none !important; }
+
+    table.dataTable tbody tr {
+      transition: background 0.15s;
+      border-bottom: 1px solid rgba(139,94,60,0.1);
+    }
+
+    table.dataTable tbody tr:hover {
+      background: rgba(200,185,154,0.25) !important;
+    }
+
+    table.dataTable tbody tr:last-child { border-bottom: none; }
+
+    table.dataTable tbody td {
+      padding: 0.75rem 1rem;
+      vertical-align: top;
+      color: var(--dark-ink);
+      line-height: 1.5;
+    }
+
+    table.dataTable tbody td:first-child { padding-left: 1.5rem; }
+
+    /* Title column */
+    .col-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    /* Author column */
+    .col-author {
+      font-style: italic;
+      color: var(--ink-mid);
+    }
+
+    /* Link */
+    .read-link {
+      display: inline-block;
+      padding: 0.25rem 0.7rem;
+      border: 1px solid var(--sienna);
+      color: var(--sienna);
+      text-decoration: none;
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-radius: 2px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .read-link:hover {
+      background: var(--sienna);
+      color: var(--cream);
+    }
+
+    /* Type badges */
+    .badge {
+      display: inline-block;
+      padding: 0.18rem 0.55rem;
+      border-radius: 2px;
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-style: normal;
+    }
+
+    .badge-permanent {
+      background: rgba(74,124,89,0.12);
+      color: var(--green);
+      border: 1px solid rgba(74,124,89,0.3);
+    }
+
+    .badge-temporary {
+      background: rgba(176,125,46,0.12);
+      color: var(--amber);
+      border: 1px solid rgba(176,125,46,0.3);
+    }
+
+    /* ── DATATABLE INFO / PAGINATION ── */
+    .dataTables_wrapper {
+      padding: 0;
+    }
+
+    .dataTables_info,
+    .dataTables_paginate {
+      font-family: 'EB Garamond', serif;
+      font-size: 0.85rem;
+      color: var(--ink-mid);
+      padding: 1rem 1.5rem !important;
+    }
+
+    .dataTables_paginate .paginate_button {
+      padding: 0.2rem 0.6rem !important;
+      border-radius: 2px !important;
+      font-size: 0.85rem !important;
+      color: var(--ink-mid) !important;
+      cursor: pointer;
+    }
+
+    .dataTables_paginate .paginate_button.current,
+    .dataTables_paginate .paginate_button.current:hover {
+      background: var(--sienna) !important;
+      border-color: var(--sienna) !important;
+      color: var(--cream) !important;
+    }
+
+    .dataTables_paginate .paginate_button:hover {
+      background: var(--parchment) !important;
+      border-color: var(--rule) !important;
+      color: var(--dark-ink) !important;
+    }
+
+    /* hide default DT search/length */
+    .dataTables_filter,
+    .dataTables_length { display: none !important; }
+
+    /* ── FOOTER ── */
+    footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--rule);
+      font-size: 0.8rem;
+      color: var(--ink-mid);
+      opacity: 0.65;
+      font-style: italic;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 700px) {
+      .page-wrap { padding: 0 1rem 3rem; }
+      h1 { font-size: 2rem; }
+      .controls { flex-direction: column; align-items: stretch; }
+      .search-wrap { max-width: 100%; }
+    }
+
+    /* ── FADE IN ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    header, .controls, .table-outer, footer {
+      animation: fadeUp 0.5s ease both;
+    }
+    .controls  { animation-delay: 0.08s; }
+    .table-outer { animation-delay: 0.14s; }
+    footer     { animation-delay: 0.2s; }
+  </style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <header>
+    <p class="header-eyebrow">A community-sourced collection</p>
+    <h1>Philosophy Texts<br><em>For Everyone</em></h1>
+    <p class="header-sub">Freely and legally available philosophy books, gathered from community threads. Every link is open access.</p>
+    <div class="header-meta">
+      <span class="meta-chip" id="count-chip">Loading…</span>
+      <span class="meta-chip">Free to read</span>
+      <span class="meta-chip">Community curated</span>
+    </div>
+  </header>
+
+  <div class="controls">
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input type="text" id="search-input" placeholder="Search by title, author, topic…">
+    </div>
+    <div class="filter-wrap">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="permanent">Permanent</button>
+      <button class="filter-btn" data-filter="temporary">Temporary</button>
+    </div>
+  </div>
+
+  <div id="loading">Opening the stacks…</div>
+
+  <div class="table-outer" style="display:none;" id="table-outer">
+    <table id="lib-table" class="dataTable no-footer">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Author(s)</th>
+          <th>Publisher</th>
+          <th>Year</th>
+          <th>Type</th>
+          <th>Licensing</th>
+          <th>Read</th>
+          <th class="dt-hidden">Thread</th>
+          <th class="dt-hidden">Commenter</th>
+          <th class="dt-hidden">Date</th>
+          <th class="dt-hidden">Notes</th>
+        </tr>
+      </thead>
+      <tbody id="lib-body"></tbody>
+    </table>
+  </div>
+
+  <footer>
+    <span>All texts freely and legally available. Links sourced from public community threads.</span>
+    <span id="last-updated"></span>
+  </footer>
+
+</div>
+
+<script>
+  // ─────────────────────────────────────────────
+  // !! REPLACE THIS URL WITH YOUR PUBLISHED CSV !!
+  // In Google Sheets: File → Share → Publish to web
+  // Choose your sheet tab + CSV format, then paste the URL below.
+  // ─────────────────────────────────────────────
+  const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR_YV7AsuNIAv377oXxb9F7li6bwfpCz_jOmxjqD3cA4m_wQR7wGASfpvNPZcCgxw/pub?gid=1824774186&single=true&output=csv';
+
+  // Column indices (0-based) matching your sheet order:
+  // Thread, Commenter, Date, Book, Title, Author(s), Publisher, Year, URL Access, Type, Licensing, Notes
+  const COL = {
+    thread:    0,
+    commenter: 1,
+    date:      2,
+    book:      3,
+    title:     4,
+    authors:   5,
+    publisher: 6,
+    year:      7,
+    url:       8,
+    type:      9,
+    licensing: 10,
+    notes:     11
+  };
+
+  let table;
+  let currentFilter = 'all';
+
+  function buildBadge(type) {
+    const t = (type || '').trim().toLowerCase();
+    if (t.includes('permanent')) return `<span class="badge badge-permanent">Permanent</span>`;
+    if (t.includes('temporary')) return `<span class="badge badge-temporary">Temporary</span>`;
+    return `<span class="badge" style="opacity:0.5">${type || '—'}</span>`;
+  }
+
+  function buildLink(url) {
+    if (!url || !url.trim()) return '—';
+    return `<a class="read-link" href="${url.trim()}" target="_blank" rel="noopener">Read ↗</a>`;
+  }
+
+  function loadData() {
+    Papa.parse(CSV_URL, {
+      download: true,
+      header: false,
+      skipEmptyLines: true,
+      complete: function(results) {
+        const rows = results.data.slice(1); // skip header row
+        const tbody = document.getElementById('lib-body');
+
+        rows.forEach(row => {
+          const tr = document.createElement('tr');
+          tr.dataset.type = (row[COL.type] || '').trim().toLowerCase();
+
+          tr.innerHTML = `
+            <td class="col-title">${row[COL.title] || '—'}</td>
+            <td class="col-author">${row[COL.authors] || '—'}</td>
+            <td>${row[COL.publisher] || '—'}</td>
+            <td>${row[COL.year] || '—'}</td>
+            <td>${buildBadge(row[COL.type])}</td>
+            <td>${row[COL.licensing] || '—'}</td>
+            <td>${buildLink(row[COL.url])}</td>
+            <td>${row[COL.thread] || '—'}</td>
+            <td>${row[COL.commenter] || '—'}</td>
+            <td>${row[COL.date] || '—'}</td>
+            <td>${row[COL.notes] || '—'}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        // Init DataTable
+        table = $('#lib-table').DataTable({
+          pageLength: 25,
+          columnDefs: [
+            { targets: [7, 8, 9, 10], visible: false } // hide Thread, Commenter, Date, Notes
+          ],
+          order: [[0, 'asc']],
+          language: {
+            info:      'Showing _START_–_END_ of _TOTAL_ texts',
+            infoEmpty: 'No texts found',
+            paginate: {
+              previous: '←',
+              next:     '→'
+            }
+          }
+        });
+
+        // Update count
+        document.getElementById('count-chip').textContent = `${rows.length} texts`;
+        document.getElementById('last-updated').textContent = `Updated ${new Date().toLocaleDateString('en-GB', {year:'numeric',month:'long',day:'numeric'})}`;
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('table-outer').style.display = 'block';
+
+        // Custom search
+        document.getElementById('search-input').addEventListener('input', function() {
+          table.search(this.value).draw();
+        });
+
+        // Type filter buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+          btn.addEventListener('click', function() {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            currentFilter = this.dataset.filter;
+
+            $.fn.dataTable.ext.search.pop();
+
+            if (currentFilter !== 'all') {
+              $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                const rowType = table.row(dataIndex).node().dataset.type || '';
+                return rowType.includes(currentFilter);
+              });
+            }
+
+            table.draw();
+          });
+        });
+      },
+      error: function() {
+        document.getElementById('loading').innerHTML =
+          'Could not load the library. Make sure the Google Sheet is published as CSV and the URL is set in the code.';
+      }
+    });
+  }
+
+  loadData();
+</script>
+</body>
+</html>
